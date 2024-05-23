@@ -15,30 +15,104 @@ import base64
 from PIL import Image
 from io import BytesIO
 import time as ts
+import zipfile
 
 
-PROXY_HOST = 'brd.superproxy.io'
-PROXY_PASS = '7vhf343x0g8w'
-PROXY_USER = 'brd-customer-hl_3fc24d3f-zone-residential_proxy1-country-es'
-PROXY_PORT = '22225'
-PROXY = PROXY_HOST+':'+PROXY_PASS+'@'+PROXY_USER+':'+PROXY_PORT
+# PROXY_HOST = 'geo.iproyal.com'
+# PROXY_PASS = '3ZJOBdtMrxEuATla_country-es_session-f9bXq6Bh_lifetime-5m'
+# PROXY_USER = 'o0CD9ajN0nnmAjPa'
+# PROXY_PORT = '12321'
+# PROXY = PROXY_HOST+':'+PROXY_PASS+'@'+PROXY_USER+':'+PROXY_PORT
 
-# Proxy authentication string
-PROXY_AUTH = f'{PROXY_USER}:{PROXY_PASS}@{PROXY_HOST}:{PROXY_PORT}'
+# # Proxy authentication string
+# PROXY_AUTH = f'{PROXY_USER}:{PROXY_PASS}@{PROXY_HOST}:{PROXY_PORT}'
 
-# Selenium Wire proxy options
-proxy_options = {
-    'proxy': {
-        'https': f'http://{PROXY_AUTH}',
-        'http': f'http://{PROXY_AUTH}',
-    }
+# # Selenium Wire proxy options
+# proxy_options = {
+#     'proxy': {
+#         'https': f'http://{PROXY_AUTH}',
+#         'http': f'http://{PROXY_AUTH}',
+#     }
+# }
+
+# s = Service(ChromeDriverManager().install())
+# options = webdriver.ChromeOptions()
+# options.add_argument("--log-level=3")
+
+# driver = wire_webdriver.Chrome(service=s, options=options, seleniumwire_options=proxy_options)
+
+
+PROXY_HOST = 'geo.iproyal.com'
+PROXY_PORT = '12321'
+PROXY_USER = 'o0CD9ajN0nnmAjPa'
+PROXY_PASS = '3ZJOBdtMrxEuATla_country-es_session-f9bXq6Bh_lifetime-1m'
+
+manifest_json = """
+{
+    "version": "1.0.0",
+    "manifest_version": 2,
+    "name": "Chrome Proxy",
+    "permissions": [
+        "proxy",
+        "tabs",
+        "unlimitedStorage",
+        "storage",
+        "<all_urls>",
+        "webRequest",
+        "webRequestBlocking"
+    ],
+    "background": {
+        "scripts": ["background.js"]
+    },
+    "minimum_chrome_version":"22.0.0"
 }
+"""
 
+background_js = f"""
+var config = {{
+        mode: "fixed_servers",
+        rules: {{
+          singleProxy: {{
+            scheme: "http",
+            host: "{PROXY_HOST}",
+            port: parseInt({PROXY_PORT})
+          }},
+          bypassList: ["localhost"]
+        }}
+      }};
+
+chrome.proxy.settings.set({{value: config, scope: "regular"}}, function() {{}});
+
+function callbackFn(details) {{
+    return {{
+        authCredentials: {{
+            username: "{PROXY_USER}",
+            password: "{PROXY_PASS}"
+        }}
+    }};
+}}
+
+chrome.webRequest.onAuthRequired.addListener(
+            callbackFn,
+            {{urls: ["<all_urls>"]}},
+            ['blocking']
+);
+"""
+
+pluginfile = 'proxy_auth_plugin.zip'
+
+with zipfile.ZipFile(pluginfile, 'w') as zp:
+    zp.writestr('manifest.json', manifest_json)
+    zp.writestr('background.js', background_js)
+
+# Set up Chrome options
+chrome_options = webdriver.ChromeOptions()
+chrome_options.add_argument("--log-level=3")
+chrome_options.add_extension(pluginfile)
+
+# Initialize the Chrome driver with options
 s = Service(ChromeDriverManager().install())
-options = webdriver.ChromeOptions()
-options.add_argument("--log-level=3")
-
-driver = wire_webdriver.Chrome(service=s, options=options, seleniumwire_options=proxy_options)
+driver = webdriver.Chrome(service=s, options=chrome_options)
 
 # Province
 province = Province.MADRID
@@ -88,7 +162,7 @@ def not_secure():
     driver.get(get_url())
     
     try:
-        WebDriverWait(driver, 1).until(
+        WebDriverWait(driver, 2).until(
             ec.element_to_be_clickable(
                 (By.ID,"details-button"))).click()
         driver.find_element(By.ID, "proceed-link").click()
@@ -104,7 +178,7 @@ def send_request():
     # Click button "Entrar"
     driver.execute_script("document.forms[0].submit()")
 
-    WebDriverWait(driver, 1).until(
+    WebDriverWait(driver, 2).until(
         ec.presence_of_element_located(
             (By.ID, "btnEnviar")))
 
@@ -119,13 +193,13 @@ def check_is_available_appointment():
     available_second = False
 
     try:
-        WebDriverWait(driver, 1).until(
+        WebDriverWait(driver, 2).until(
             ec.presence_of_element_located(
                 (By.XPATH, "//p[text()='En este momento no hay citas disponibles.']")))
     except TimeoutException:
         available_first = True
     try:
-        WebDriverWait(driver, 1).until(
+        WebDriverWait(driver, 2).until(
             ec.presence_of_element_located(
                 (By.XPATH, "//span[text()='En este momento no hay citas disponibles.']")))
     except TimeoutException:
@@ -144,14 +218,14 @@ def get_url():
 
 def select_office_and_operation():
     if office.value != "":
-        WebDriverWait(driver, 1).until(
+        WebDriverWait(driver, 2).until(
             ec.element_to_be_clickable(
                 (By.XPATH, "//select[@id='sede']//option[@value='" + office.value + "']")))
         dropdown_offices = Select(driver.find_element(By.ID, "sede"))
         dropdown_offices.select_by_value(office.value)
 
     try:
-        WebDriverWait(driver, 1).until(
+        WebDriverWait(driver, 2).until(
             ec.element_to_be_clickable(
                 (By.XPATH,
                  "//select[@id='tramiteGrupo[0]']//option[@value='" + operation_type.value + "']")))
@@ -162,7 +236,7 @@ def select_office_and_operation():
         pass
 
     try:
-        WebDriverWait(driver, 1).until(
+        WebDriverWait(driver, 2).until(
             ec.element_to_be_clickable(
                 (By.XPATH,
                  "//select[@id='tramiteGrupo[1]']//option[@value='" + operation_type.value + "']")))
@@ -180,7 +254,7 @@ def fill_personal_data():
 
     while error:
         try:
-            WebDriverWait(driver, 1).until(
+            WebDriverWait(driver, 2).until(
                 ec.element_to_be_clickable(
                     (By.ID, document_type.value))).click()
             error = False
@@ -193,7 +267,7 @@ def fill_personal_data():
     fill_input("txtFecha", expiration_date)
 
     try:
-        WebDriverWait(driver, 1).until(
+        WebDriverWait(driver, 2).until(
             ec.element_to_be_clickable(
                 (By.XPATH,
                  "//select[@id='txtPaisNac']//option[@value='" + nationality.value + "']")))
@@ -207,7 +281,7 @@ def fill_personal_data():
 
 
 def select_first_office():
-    WebDriverWait(driver, 1).until(
+    WebDriverWait(driver, 2).until(
         ec.presence_of_element_located(
             (By.ID, "idSede")))
 
