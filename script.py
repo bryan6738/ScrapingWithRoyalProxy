@@ -1,6 +1,10 @@
 from selenium import webdriver
 from seleniumwire import webdriver as wire_webdriver
-from selenium.common.exceptions import NoSuchElementException, TimeoutException, ElementClickInterceptedException
+from selenium.common.exceptions import (
+    NoSuchElementException,
+    TimeoutException,
+    ElementClickInterceptedException,
+)
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
@@ -8,7 +12,8 @@ from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 from values import OperationType, Office, Province, Country, DocumentType
-import winsound
+
+# import winsound
 from selenium.webdriver.common.alert import Alert
 import captcha
 import base64
@@ -42,10 +47,10 @@ import zipfile
 # driver = wire_webdriver.Chrome(service=s, options=options, seleniumwire_options=proxy_options)
 
 
-PROXY_HOST = 'geo.iproyal.com'
-PROXY_PORT = '12321'
-PROXY_USER = 'o0CD9ajN0nnmAjPa'
-PROXY_PASS = '3ZJOBdtMrxEuATla_country-es_session-f9bXq6Bh_lifetime-1m'
+PROXY_HOST = "geo.iproyal.com"
+PROXY_PORT = "12321"
+PROXY_USER = "o0CD9ajN0nnmAjPa"
+PROXY_PASS = "3ZJOBdtMrxEuATla_country-es_session-f9bXq6Bh_lifetime-1m"
 
 manifest_json = """
 {
@@ -99,11 +104,11 @@ chrome.webRequest.onAuthRequired.addListener(
 );
 """
 
-pluginfile = 'proxy_auth_plugin.zip'
+pluginfile = "proxy_auth_plugin.zip"
 
-with zipfile.ZipFile(pluginfile, 'w') as zp:
-    zp.writestr('manifest.json', manifest_json)
-    zp.writestr('background.js', background_js)
+with zipfile.ZipFile(pluginfile, "w") as zp:
+    zp.writestr("manifest.json", manifest_json)
+    zp.writestr("background.js", background_js)
 
 # Set up Chrome options
 chrome_options = webdriver.ChromeOptions()
@@ -122,7 +127,9 @@ office = Office.NULL  # Office.NULL when the select is empty
 # Datos a modificar para cada cliente
 
 # Operation Type
-operation_type = OperationType.MADRID_ASILO_PRIMERA_CITA  # OperationType.NULL when the select is empty
+operation_type = (
+    OperationType.MADRID_ASILO_PRIMERA_CITA
+)  # OperationType.NULL when the select is empty
 # Document Type
 document_type = DocumentType.PASSPORT
 # Personal data
@@ -135,9 +142,10 @@ expiration_date = "23/07/2022"
 phone = "687727870"
 email = "almodovarrodriguez@hotmail.com"
 
+
 def main():
     not_secure()
-    
+
     send_request()
 
     while not check_is_available_appointment():
@@ -153,18 +161,18 @@ def main():
 
     print("\n--------------------Cita Disponible--------------------")
 
-    winsound.PlaySound("./sounds/alarm.wav", winsound.SND_FILENAME)
+    # winsound.PlaySound("./sounds/alarm.wav", winsound.SND_FILENAME)
 
     select_free_appointment_and_resolve_captcha()
 
 
 def not_secure():
     driver.get(get_url())
-    
+
     try:
         WebDriverWait(driver, 2).until(
-            ec.element_to_be_clickable(
-                (By.ID,"details-button"))).click()
+            ec.element_to_be_clickable((By.ID, "details-button"))
+        ).click()
         driver.find_element(By.ID, "proceed-link").click()
     except (NoSuchElementException, TimeoutException):
         pass
@@ -178,9 +186,7 @@ def send_request():
     # Click button "Entrar"
     driver.execute_script("document.forms[0].submit()")
 
-    WebDriverWait(driver, 2).until(
-        ec.presence_of_element_located(
-            (By.ID, "btnEnviar")))
+    WebDriverWait(driver, 2).until(ec.presence_of_element_located((By.ID, "btnEnviar")))
 
     fill_personal_data()
 
@@ -195,19 +201,23 @@ def check_is_available_appointment():
     try:
         WebDriverWait(driver, 2).until(
             ec.presence_of_element_located(
-                (By.XPATH, "//p[text()='En este momento no hay citas disponibles.']")))
+                (By.XPATH, "//p[text()='En este momento no hay citas disponibles.']")
+            )
+        )
     except TimeoutException:
         available_first = True
     try:
         WebDriverWait(driver, 2).until(
             ec.presence_of_element_located(
-                (By.XPATH, "//span[text()='En este momento no hay citas disponibles.']")))
+                (By.XPATH, "//span[text()='En este momento no hay citas disponibles.']")
+            )
+        )
     except TimeoutException:
         available_second = True
 
     if available_first and available_second:
         return True
-    
+
     ts.sleep(180)
     return False
 
@@ -220,15 +230,26 @@ def select_office_and_operation():
     if office.value != "":
         WebDriverWait(driver, 2).until(
             ec.element_to_be_clickable(
-                (By.XPATH, "//select[@id='sede']//option[@value='" + office.value + "']")))
+                (
+                    By.XPATH,
+                    "//select[@id='sede']//option[@value='" + office.value + "']",
+                )
+            )
+        )
         dropdown_offices = Select(driver.find_element(By.ID, "sede"))
         dropdown_offices.select_by_value(office.value)
 
     try:
         WebDriverWait(driver, 2).until(
             ec.element_to_be_clickable(
-                (By.XPATH,
-                 "//select[@id='tramiteGrupo[0]']//option[@value='" + operation_type.value + "']")))
+                (
+                    By.XPATH,
+                    "//select[@id='tramiteGrupo[0]']//option[@value='"
+                    + operation_type.value
+                    + "']",
+                )
+            )
+        )
 
         dropdown_operation = Select(driver.find_element(By.ID, "tramiteGrupo[0]"))
         dropdown_operation.select_by_value(operation_type.value)
@@ -238,8 +259,14 @@ def select_office_and_operation():
     try:
         WebDriverWait(driver, 2).until(
             ec.element_to_be_clickable(
-                (By.XPATH,
-                 "//select[@id='tramiteGrupo[1]']//option[@value='" + operation_type.value + "']")))
+                (
+                    By.XPATH,
+                    "//select[@id='tramiteGrupo[1]']//option[@value='"
+                    + operation_type.value
+                    + "']",
+                )
+            )
+        )
 
         dropdown_operation = Select(driver.find_element(By.ID, "tramiteGrupo[1]"))
         dropdown_operation.select_by_value(operation_type.value)
@@ -255,8 +282,8 @@ def fill_personal_data():
     while error:
         try:
             WebDriverWait(driver, 2).until(
-                ec.element_to_be_clickable(
-                    (By.ID, document_type.value))).click()
+                ec.element_to_be_clickable((By.ID, document_type.value))
+            ).click()
             error = False
         except ElementClickInterceptedException:
             error = True
@@ -269,8 +296,14 @@ def fill_personal_data():
     try:
         WebDriverWait(driver, 2).until(
             ec.element_to_be_clickable(
-                (By.XPATH,
-                 "//select[@id='txtPaisNac']//option[@value='" + nationality.value + "']")))
+                (
+                    By.XPATH,
+                    "//select[@id='txtPaisNac']//option[@value='"
+                    + nationality.value
+                    + "']",
+                )
+            )
+        )
 
         dropdown_nationality = Select(driver.find_element(By.ID, "txtPaisNac"))
         dropdown_nationality.select_by_value(nationality.value)
@@ -281,9 +314,7 @@ def fill_personal_data():
 
 
 def select_first_office():
-    WebDriverWait(driver, 2).until(
-        ec.presence_of_element_located(
-            (By.ID, "idSede")))
+    WebDriverWait(driver, 2).until(ec.presence_of_element_located((By.ID, "idSede")))
 
     dropdown_office = Select(driver.find_element(By.ID, "idSede"))
 
@@ -327,7 +358,8 @@ def select_free_appointment_and_resolve_captcha():
     while error:
         try:
             WebDriverWait(driver, 2).until(
-                ec.presence_of_element_located((By.XPATH, "//span[text()='LIBRE']"))).click()
+                ec.presence_of_element_located((By.XPATH, "//span[text()='LIBRE']"))
+            ).click()
             error = False
         except ElementClickInterceptedException:
             error = True
@@ -338,7 +370,8 @@ def select_free_appointment_and_resolve_captcha():
 def download_captcha():
     try:
         WebDriverWait(driver, 2).until(
-            ec.presence_of_element_located((By.XPATH, "//img[@alt='captcha']")))
+            ec.presence_of_element_located((By.XPATH, "//img[@alt='captcha']"))
+        )
     except TimeoutException:
         pass
     else:
